@@ -1,0 +1,55 @@
+# 1. Specify the version for docker-compose.yml
+version: "3.8"
+
+# 2. Generate redis and mariadb service
+services:
+    bnmo-db:
+        container_name: "bnmo-db"
+        image: mariadb
+        restart: unless-stopped
+        ports:
+            - "3310:3306"
+        volumes:
+            - ./bnmo-db:/docker-entrypoint-initdb.d
+        environment:
+            MYSQL_ROOT_PASSWORD: admin
+            MYSQL_DATABASE: bnmo
+            MYSQL_USER: root
+            MYSQL_PASSWORD: admin
+
+    bnmo-redis:
+        container_name: "bnmo-redis"
+        image: redis:alpine
+        command: redis-server /usr/local/etc/redis/redis.conf
+        ports:
+            - "6379:6379"
+        volumes:
+            - /redis.conf:/usr/local/etc/redis/redis.conf
+
+    bnmo-backend:
+        container_name: "bnmo-backend"
+        build:
+            context: ../BNMO-Backend
+            dockerfile: Dockerfile
+        volumes:
+            - ../BNMO-Backend:/bnmo-backend
+        ports:
+            - "8080:8080"
+        depends_on:
+            - bnmo-db
+            - bnmo-redis
+
+    bnmo-frontend:
+        container_name: "bnmo-frontend"
+        volumes:
+            - ../BNMO-Frontend/src:/vue-vite-app/src
+            - ../BNMO-Frontend/public:/vue-vite-app/public
+            - ../BNMO-Frontend/tailwind.config.js:/vue-vite-app/tailwind.config.js
+        build:
+            context: ../BNMO-Frontend
+            dockerfile: Dockerfile
+        ports:
+            - 3000:3000
+
+volumes:
+    bnmo-db:
